@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CameraController, type CameraState, idleCameraState } from './cameraSession';
 import { gestureById, gestures, type GestureId } from './gestures';
 import type { Point } from './classify';
+import { GestureStabilizer } from './gestureStabilizer';
 
 function imageUrl(fileName: string): string {
   return new URL(`hamsters/${fileName}`, document.baseURI).toString();
@@ -36,7 +37,9 @@ function drawDebugOverlay(canvas: HTMLCanvasElement, debug: DebugLandmarks, sour
 export default function App() {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [camera, setCamera] = useState<CameraState>(idleCameraState);
-  const [gestureId, setGestureId] = useState<GestureId>('default');
+  const [rawGestureId, setRawGestureId] = useState<GestureId>('default');
+  const [stableGestureId, setStableGestureId] = useState<GestureId>('default');
+  const [gestureStabilizer] = useState(() => new GestureStabilizer());
   const [recognitionMessage, setRecognitionMessage] = useState('Recognition starts when the camera is connected.');
   const [showDebug, setShowDebug] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<Pick<DebugLandmarks, 'yawDegrees' | 'pitchDegrees' | 'inferenceRate'> | null>(null);
@@ -44,7 +47,7 @@ export default function App() {
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cameraControllerRef = useRef<CameraController | null>(null);
   const inferenceGenerationRef = useRef(0);
-  const activeGesture = gestureById[gestureId];
+  const activeGesture = gestureById[stableGestureId];
 
   useEffect(() => {
     const cameraController = new CameraController({
@@ -53,9 +56,11 @@ export default function App() {
         video: { facingMode: { ideal: 'user' } },
       }),
       onState: (nextCamera) => {
+        if (nextCamera.status !== 'ready') ++inferenceGenerationRef.current;
         setCamera(nextCamera);
         if (nextCamera.status !== 'ready') {
-          setGestureId('default');
+          setRawGestureId('default');
+          setStableGestureId(gestureStabilizer.reset());
           setDebugMetrics(null);
           const context = overlayRef.current?.getContext('2d');
           if (context && overlayRef.current) context.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
@@ -80,7 +85,7 @@ export default function App() {
       cameraController.dispose();
       cameraControllerRef.current = null;
     };
-  }, []);
+  }, [gestureStabilizer]);
 
   function startCamera() {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
@@ -99,7 +104,8 @@ export default function App() {
   useEffect(() => {
     if (camera.status !== 'ready') return;
 
-    const generation = ++inferenceGenerationRef.current;
+    const generation = inferenceGenerationRef.current + 1;
+    inferenceGenerationRef.current = generation;
     const worker = new Worker(new URL('./inference.worker.ts', import.meta.url), { type: 'module' });
     let isAlive = true;
     let isReady = false;
@@ -108,9 +114,9 @@ export default function App() {
     let lastFrameAt = 0;
     let frameHandle = 0;
 
-    worker.onmessage = (event: MessageEvent<{ type: string; generation: number; candidate?: { id: GestureId }; debug?: DebugLandmarks; message?: string }>) => {
+    worker.onmessage = (event: MessageEvent<{ type: string; generation: number; timestamp?: number; candidate?: { id: GestureId }; debug?: DebugLandmarks; message?: string }>) => {
       const message = event.data;
-      if (!isAlive || message.generation !== generation) return;
+      if (!isAlive || message.generation !== generation || message.generation !== inferenceGenerationRef.current) return;
       if (message.type === 'ready') {
         isReady = true;
         setRecognitionMessage('Recognition is running locally.');
@@ -118,7 +124,10 @@ export default function App() {
       }
       if (message.type === 'result') {
         isInFlight = false;
-        if (message.candidate) setGestureId(message.candidate.id);
+        if (message.candidate) {
+          setRawGestureId(message.candidate.id);
+          setStableGestureId(gestureStabilizer.observe(message.candidate.id, message.timestamp ?? performance.now()));
+        }
         if (message.debug) setDebugMetrics(message.debug);
         const video = videoRef.current;
         const overlay = overlayRef.current;
@@ -143,7 +152,8 @@ export default function App() {
       isInFlight = false;
       cancelAnimationFrame(frameHandle);
       worker.terminate();
-      setGestureId('default');
+      setRawGestureId('default');
+      setStableGestureId(gestureStabilizer.reset());
       setDebugMetrics(null);
       const overlay = overlayRef.current;
       const context = overlay?.getContext('2d');
@@ -177,10 +187,11 @@ export default function App() {
     frameHandle = requestAnimationFrame(requestFrame);
     return () => {
       isAlive = false;
+      if (inferenceGenerationRef.current === generation) ++inferenceGenerationRef.current;
       cancelAnimationFrame(frameHandle);
       worker.terminate();
     };
-  }, [camera.status]);
+  }, [camera.status, gestureStabilizer]);
 
   return (
     <main className="page-shell" id="top">
@@ -221,7 +232,7 @@ export default function App() {
           <p className="camera-note" aria-live="polite">{camera.message}</p>
           <p className="recognition-note" aria-live="polite">{camera.status === 'ready' ? recognitionMessage : 'Recognition is stopped. No frames are being analyzed.'}</p>
           {showDebug && debugMetrics && (
-            <p className="debug-readout">yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps</p>
+            <p className="debug-readout">raw {gestureById[rawGestureId].label} · yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps</p>
           )}
         </article>
       </section>

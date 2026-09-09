@@ -80,6 +80,7 @@ async function infer(message: FrameMessage) {
     worker.postMessage({
       type: 'result',
       generation: message.generation,
+      timestamp: message.timestamp,
       candidate,
       debug: { face, hands, pose, yawDegrees: headYawDegrees(facialTransformationMatrix), pitchDegrees: headPitchDegrees(facialTransformationMatrix), inferenceRate },
     });
