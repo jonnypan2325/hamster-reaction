@@ -14,7 +14,7 @@ export const THRESHOLDS = {
   glassesNearFace: 0.28, mouthNear: 0.14, elbowBendDegrees: 100, poseVisibility: 0.5,
   handsTogether: 0.12, thinkingNearMouth: 0.25, hugBelowFace: 0.2, yawDegrees: 18,
   pitchDegrees: 15, mouthPucker: 0.25, browRaised: 0.70, jawOpen: 0.5,
-  teethSmile: 0.35, teethJawOpenMax: 0.35,
+  teethSmile: 0.35, teethJawOpenMax: 0.35, mouthFrown: 0.25,
 } as const;
 
 const defaultCandidate: Candidate = { id: 'default', confidence: 0 };
@@ -40,7 +40,12 @@ export function classifyFace(blendshapes: Record<string, number>): Candidate | n
     return { id: 'teeth', confidence: average(smileLeft, smileRight) };
   }
   if (mouthPucker >= THRESHOLDS.mouthPucker && jawOpen >= THRESHOLDS.mouthPucker) return { id: 'silly', confidence: average(mouthPucker, jawOpen) };
-  return jawOpen >= THRESHOLDS.jawOpen ? { id: 'drooling', confidence: jawOpen } : null;
+  if (jawOpen >= THRESHOLDS.jawOpen) return { id: 'drooling', confidence: jawOpen };
+  const frownLeft = score(blendshapes, 'mouthFrownLeft');
+  const frownRight = score(blendshapes, 'mouthFrownRight');
+  return frownLeft >= THRESHOLDS.mouthFrown && frownRight >= THRESHOLDS.mouthFrown
+    ? { id: 'sad', confidence: average(frownLeft, frownRight) }
+    : null;
 }
 
 export function fingersUp(landmarks: Point[]): boolean[] | null {
@@ -149,9 +154,8 @@ export function classifyDetection(input: DetectionInput): Candidate {
   if (detectCrossArms(input.pose)) return { id: 'cross-arms', confidence: 0.7 };
   if (detectBicep(input.pose)) return { id: 'bicep', confidence: 0.6 };
   if (input.hands.length === 2) return { id: 'two-hands', confidence: 0.5 };
-  const pitch = headPitchDegrees(input.facialTransformationMatrix);
-  if (pitch !== null && pitch > THRESHOLDS.pitchDegrees) return { id: 'sad', confidence: pitch / 90 };
   const yaw = headYawDegrees(input.facialTransformationMatrix);
-  if (yaw !== null && Math.abs(yaw) > THRESHOLDS.yawDegrees) return { id: 'side-eye', confidence: Math.abs(yaw) / 90 };
+  if (yaw !== null && yaw > THRESHOLDS.yawDegrees) return { id: 'side-eye-right' as GestureId, confidence: yaw / 90 };
+  if (yaw !== null && yaw < -THRESHOLDS.yawDegrees) return { id: 'side-eye-left' as GestureId, confidence: -yaw / 90 };
   return defaultCandidate;
 }

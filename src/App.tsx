@@ -113,7 +113,7 @@ export default function App() {
   }
 
   function stopCamera() {
-    setRecognitionMessage('Recognition is stopped. No frames are being analyzed.');
+    setRecognitionMessage('');
     cameraControllerRef.current?.stop();
   }
 
@@ -135,7 +135,7 @@ export default function App() {
       if (!isAlive || message.generation !== generation || message.generation !== inferenceGenerationRef.current) return;
       if (message.type === 'ready') {
         isReady = true;
-        setRecognitionMessage('Recognition is running locally.');
+        setRecognitionMessage('');
         return;
       }
       if (message.type === 'result') {
@@ -245,7 +245,7 @@ export default function App() {
             </div>
           </div>
           <p className="camera-note" aria-live="polite">{camera.message}</p>
-          <p className="recognition-note" aria-live="polite">{camera.status === 'ready' ? recognitionMessage : 'Recognition is stopped. No frames are being analyzed.'}</p>
+          {recognitionMessage && <p className="recognition-note" aria-live="polite">{recognitionMessage}</p>}
           {showDebug && debugMetrics && (
             <p className="debug-readout">
               raw {gestureById[rawGestureId].label} · yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps
@@ -266,7 +266,7 @@ export default function App() {
         >
           <span>
             <span className="eyebrow">Gesture guide</span>
-            <strong id="guide-title">Eighteen ways to meet the hamster</strong>
+            <strong id="guide-title">Reactions</strong>
           </span>
           <span className="toggle-mark" aria-hidden="true">{isGuideOpen ? '−' : '+'}</span>
         </button>

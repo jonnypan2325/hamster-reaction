@@ -54,6 +54,8 @@ describe('gesture classifier', () => {
     expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, mouthPucker: 0.25, jawOpen: 0.25 })?.id).toBe('teeth');
     expect(classifyFace({ mouthPucker: 0.25, jawOpen: 0.5 })?.id).toBe('silly');
     expect(classifyFace({ jawOpen: 0.5 })?.id).toBe('drooling');
+    expect(classifyFace({ mouthFrownLeft: 0.25, mouthFrownRight: 0.25 })?.id).toBe('sad');
+    expect(classifyFace({ mouthFrownLeft: 0.25, mouthFrownRight: 0.249 })).toBeNull();
   });
 
   it('ports wrist-scale finger and pinch geometry including degenerate hands', () => {
@@ -74,8 +76,9 @@ describe('gesture classifier', () => {
     ['cross-arms', input({ pose: crossArmsPose() })],
     ['bicep', input({ pose: bicepPose() })],
     ['two-hands', input({ hands: [hand('fist', 0), hand('fist', 2)] })],
-    ['sad', input({ facialTransformationMatrix: matrix(9, -16) })],
-    ['side-eye', input({ facialTransformationMatrix: matrix(8, 19) })],
+    ['sad', input({ blendshapes: { mouthFrownLeft: 0.25, mouthFrownRight: 0.25 } })],
+    ['side-eye-right', input({ facialTransformationMatrix: matrix(8, 19) })],
+    ['side-eye-left', input({ facialTransformationMatrix: matrix(8, -19) })],
     ['default', input()],
   ])('classifies %s in the specified priority chain', (gesture, value) => {
     expect(classifyDetection(value).id).toBe(gesture);
@@ -88,12 +91,13 @@ describe('gesture classifier', () => {
     expect(classifyDetection(input({ hands: [hand('thumb-up', 0.3)], face: head })).id).toBe('fist-by-head');
   });
 
-  it('uses column-major matrix slots and sad before yaw at their boundaries', () => {
+  it('uses column-major matrix slots and face expressions before yaw', () => {
     expect(headYawDegrees(matrix(8, 18))).toBeCloseTo(18);
     expect(headPitchDegrees(matrix(9, -15))).toBeCloseTo(15);
     expect(classifyDetection(input({ facialTransformationMatrix: matrix(9, -15) })).id).toBe('default');
     const both = matrix(9, -20); both[8] = Math.sin(30 * Math.PI / 180);
-    expect(classifyDetection(input({ facialTransformationMatrix: both })).id).toBe('sad');
+    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.25, mouthFrownRight: 0.25 }, facialTransformationMatrix: both })).id).toBe('sad');
+    expect(classifyDetection(input({ facialTransformationMatrix: matrix(9, -20) })).id).toBe('default');
   });
 
   it('does not use invisible or non-chest pose landmarks', () => {
