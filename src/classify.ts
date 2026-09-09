@@ -14,7 +14,7 @@ export const THRESHOLDS = {
   glassesNearFace: 0.28, mouthNear: 0.14, elbowBendDegrees: 100, poseVisibility: 0.5,
   handsTogether: 0.12, thinkingNearMouth: 0.25, hugBelowFace: 0.2, yawDegrees: 18,
   mouthPucker: 0.25, browRaised: 0.70, jawOpen: 0.5,
-  smile: 0.35, smileJawOpenMax: 0.35, mouthFrown: 0.15,
+  smile: 0.35, smileJawOpenMax: 0.35, mouthFrown: 0.03,
 } as const;
 
 const defaultCandidate: Candidate = { id: 'default', confidence: 0 };

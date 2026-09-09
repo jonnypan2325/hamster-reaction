@@ -54,8 +54,8 @@ describe('gesture classifier', () => {
     expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, mouthPucker: 0.25, jawOpen: 0.25 })?.id).toBe('smile');
     expect(classifyFace({ mouthPucker: 0.25, jawOpen: 0.5 })?.id).toBe('silly');
     expect(classifyFace({ jawOpen: 0.5 })?.id).toBe('drooling');
-    expect(classifyFace({ mouthFrownLeft: 0.15, mouthFrownRight: 0.15 })?.id).toBe('sad');
-    expect(classifyFace({ mouthFrownLeft: 0.15, mouthFrownRight: 0.149 })).toBeNull();
+    expect(classifyFace({ mouthFrownLeft: 0.03, mouthFrownRight: 0.03 })?.id).toBe('sad');
+    expect(classifyFace({ mouthFrownLeft: 0.03, mouthFrownRight: 0.029 })).toBeNull();
   });
 
   it('ports wrist-scale finger and pinch geometry including degenerate hands', () => {
@@ -76,7 +76,7 @@ describe('gesture classifier', () => {
     ['cross-arms', input({ pose: crossArmsPose() })],
     ['bicep', input({ pose: bicepPose() })],
     ['two-hands', input({ hands: [hand('fist', 0), hand('fist', 2)] })],
-    ['sad', input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.15 } })],
+    ['sad', input({ blendshapes: { mouthFrownLeft: 0.03, mouthFrownRight: 0.03 } })],
     ['side-eye-right', input({ facialTransformationMatrix: matrix(8, 19) })],
     ['side-eye-left', input({ facialTransformationMatrix: matrix(8, -19) })],
     ['default', input()],
@@ -99,8 +99,8 @@ describe('gesture classifier', () => {
     expect(classifyDetection(input({ hands: [hand('thumb-up')], facialTransformationMatrix: matrix(9, -20) })).id).toBe('thumbs-up');
     const both = matrix(9, -20); both[8] = Math.sin(30 * Math.PI / 180);
     expect(classifyDetection(input({ facialTransformationMatrix: both })).id).toBe('side-eye-right');
-    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.15 }, facialTransformationMatrix: both })).id).toBe('sad');
-    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.149 }, facialTransformationMatrix: matrix(9, -20) })).id).toBe('default');
+    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.03, mouthFrownRight: 0.03 }, facialTransformationMatrix: both })).id).toBe('sad');
+    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.03, mouthFrownRight: 0.029 }, facialTransformationMatrix: matrix(9, -20) })).id).toBe('default');
   });
 
   it('maps landmark yaw according to the mirrored preview', () => {

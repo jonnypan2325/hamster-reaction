@@ -59,6 +59,7 @@ export default function App() {
   const [stableGestureId, setStableGestureId] = useState<GestureId>('default');
   const [gestureStabilizer] = useState(() => new GestureStabilizer());
   const [recognitionMessage, setRecognitionMessage] = useState('Recognition starts when the camera is connected.');
+  const [recognitionStatus, setRecognitionStatus] = useState<'idle' | 'initializing' | 'ready' | 'error'>('idle');
   const [showDebug, setShowDebug] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<Pick<DebugLandmarks, 'yawDegrees' | 'pitchDegrees' | 'inferenceRate' | 'blendshapes'> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -76,6 +77,7 @@ export default function App() {
       onState: (nextCamera) => {
         if (nextCamera.status !== 'ready') ++inferenceGenerationRef.current;
         setCamera(nextCamera);
+        setRecognitionStatus(nextCamera.status === 'ready' ? 'initializing' : 'idle');
         if (nextCamera.status !== 'ready') {
           setRawGestureId('default');
           setStableGestureId(gestureStabilizer.reset());
@@ -137,6 +139,7 @@ export default function App() {
       if (!isAlive || message.generation !== generation || message.generation !== inferenceGenerationRef.current) return;
       if (message.type === 'ready') {
         isReady = true;
+        setRecognitionStatus('ready');
         setRecognitionMessage('');
         return;
       }
@@ -168,6 +171,7 @@ export default function App() {
       hasFailed = true;
       isReady = false;
       isInFlight = false;
+      setRecognitionStatus('error');
       cancelAnimationFrame(frameHandle);
       worker.terminate();
       setRawGestureId('default');
@@ -211,6 +215,11 @@ export default function App() {
     };
   }, [camera.status, gestureStabilizer]);
 
+  const previewVisible = camera.status === 'ready' && recognitionStatus === 'ready';
+  const cameraPlaceholderMessage = camera.status === 'ready'
+    ? recognitionStatus === 'error' ? 'Recognition unavailable' : recognitionStatus === 'initializing' ? 'Preparing camera and running the hamster wheel' : 'Camera preview'
+    : 'Camera preview';
+
   return (
     <main className="page-shell" id="top">
       <header className="masthead">
@@ -239,11 +248,11 @@ export default function App() {
             <button type="button" className="debug-button" onClick={() => setShowDebug((visible) => !visible)} aria-pressed={showDebug}>Landmarks</button>
           </div>
           <div className="media-frame camera-frame">
-            <video className="camera-preview" ref={videoRef} autoPlay muted playsInline hidden={camera.status !== 'ready'} aria-label="Camera preview" />
-            <canvas className="landmark-overlay" ref={overlayRef} hidden={!showDebug || camera.status !== 'ready'} aria-hidden="true" />
-            <div className="camera-placeholder" hidden={camera.status === 'ready'}>
+            <video className="camera-preview" ref={videoRef} autoPlay muted playsInline hidden={!previewVisible} aria-label="Camera preview" />
+            <canvas className="landmark-overlay" ref={overlayRef} hidden={!showDebug || !previewVisible} aria-hidden="true" />
+            <div className="camera-placeholder" hidden={previewVisible}>
               <span className="camera-glyph" aria-hidden="true">⌁</span>
-              <p>Camera preview</p>
+              <p>{cameraPlaceholderMessage}</p>
             </div>
           </div>
           <p className="camera-note" aria-live="polite">{camera.message}</p>
