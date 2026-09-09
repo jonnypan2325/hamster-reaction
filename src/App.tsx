@@ -22,6 +22,8 @@ type DebugLandmarks = {
     browRaised: number;
     mouthSmileLeft: number;
     mouthSmileRight: number;
+    mouthFrownLeft: number;
+    mouthFrownRight: number;
     jawOpen: number;
   };
 };
@@ -250,7 +252,7 @@ export default function App() {
             <p className="debug-readout">
               raw {gestureById[rawGestureId].label} · yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps
               <br />
-              pucker {debugMetrics.blendshapes.mouthPucker.toFixed(2)} · eyes {debugMetrics.blendshapes.eyeWideLeft.toFixed(2)}/{debugMetrics.blendshapes.eyeWideRight.toFixed(2)} · brow {debugMetrics.blendshapes.browRaised.toFixed(2)} · smile {debugMetrics.blendshapes.mouthSmileLeft.toFixed(2)}/{debugMetrics.blendshapes.mouthSmileRight.toFixed(2)} · jaw {debugMetrics.blendshapes.jawOpen.toFixed(2)}
+              pucker {debugMetrics.blendshapes.mouthPucker.toFixed(2)} · eyes {debugMetrics.blendshapes.eyeWideLeft.toFixed(2)}/{debugMetrics.blendshapes.eyeWideRight.toFixed(2)} · brow {debugMetrics.blendshapes.browRaised.toFixed(2)} · smile {debugMetrics.blendshapes.mouthSmileLeft.toFixed(2)}/{debugMetrics.blendshapes.mouthSmileRight.toFixed(2)} · frown {debugMetrics.blendshapes.mouthFrownLeft.toFixed(2)}/{debugMetrics.blendshapes.mouthFrownRight.toFixed(2)} · jaw {debugMetrics.blendshapes.jawOpen.toFixed(2)}
             </p>
           )}
         </article>

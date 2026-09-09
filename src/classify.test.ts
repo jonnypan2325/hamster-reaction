@@ -48,14 +48,14 @@ describe('gesture classifier', () => {
     expect(classifyFace({ mouthPucker: 0.25, jawOpen: 0.25 })?.id).toBe('silly');
     expect(classifyFace({ mouthPucker: 0.249, jawOpen: 0.9 })?.id).toBe('drooling');
     expect(classifyFace({ mouthPucker: 0.25, jawOpen: 0.249 })).toBeNull();
-    expect(classifyFace({ mouthPucker: 0.249, mouthSmileLeft: 0.9, mouthSmileRight: 0.9 })?.id).toBe('teeth');
+    expect(classifyFace({ mouthPucker: 0.249, mouthSmileLeft: 0.9, mouthSmileRight: 0.9 })?.id).toBe('smile');
     expect(classifyFace({ mouthSmileLeft: 0.349, mouthSmileRight: 0.35, jawOpen: 0.349 })).toBeNull();
     expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, jawOpen: 0.35 })).toBeNull();
-    expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, mouthPucker: 0.25, jawOpen: 0.25 })?.id).toBe('teeth');
+    expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, mouthPucker: 0.25, jawOpen: 0.25 })?.id).toBe('smile');
     expect(classifyFace({ mouthPucker: 0.25, jawOpen: 0.5 })?.id).toBe('silly');
     expect(classifyFace({ jawOpen: 0.5 })?.id).toBe('drooling');
-    expect(classifyFace({ mouthFrownLeft: 0.25, mouthFrownRight: 0.25 })?.id).toBe('sad');
-    expect(classifyFace({ mouthFrownLeft: 0.25, mouthFrownRight: 0.249 })).toBeNull();
+    expect(classifyFace({ mouthFrownLeft: 0.15, mouthFrownRight: 0.15 })?.id).toBe('sad');
+    expect(classifyFace({ mouthFrownLeft: 0.15, mouthFrownRight: 0.149 })).toBeNull();
   });
 
   it('ports wrist-scale finger and pinch geometry including degenerate hands', () => {
@@ -76,7 +76,7 @@ describe('gesture classifier', () => {
     ['cross-arms', input({ pose: crossArmsPose() })],
     ['bicep', input({ pose: bicepPose() })],
     ['two-hands', input({ hands: [hand('fist', 0), hand('fist', 2)] })],
-    ['sad', input({ blendshapes: { mouthFrownLeft: 0.25, mouthFrownRight: 0.25 } })],
+    ['sad', input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.15 } })],
     ['side-eye-right', input({ facialTransformationMatrix: matrix(8, 19) })],
     ['side-eye-left', input({ facialTransformationMatrix: matrix(8, -19) })],
     ['default', input()],
@@ -95,9 +95,12 @@ describe('gesture classifier', () => {
     expect(headYawDegrees(matrix(8, 18))).toBeCloseTo(18);
     expect(headPitchDegrees(matrix(9, -15))).toBeCloseTo(15);
     expect(classifyDetection(input({ facialTransformationMatrix: matrix(9, -15) })).id).toBe('default');
-    const both = matrix(9, -20); both[8] = Math.sin(30 * Math.PI / 180);
-    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.25, mouthFrownRight: 0.25 }, facialTransformationMatrix: both })).id).toBe('sad');
     expect(classifyDetection(input({ facialTransformationMatrix: matrix(9, -20) })).id).toBe('default');
+    expect(classifyDetection(input({ hands: [hand('thumb-up')], facialTransformationMatrix: matrix(9, -20) })).id).toBe('thumbs-up');
+    const both = matrix(9, -20); both[8] = Math.sin(30 * Math.PI / 180);
+    expect(classifyDetection(input({ facialTransformationMatrix: both })).id).toBe('side-eye-right');
+    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.15 }, facialTransformationMatrix: both })).id).toBe('sad');
+    expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.149 }, facialTransformationMatrix: matrix(9, -20) })).id).toBe('default');
   });
 
   it('does not use invisible or non-chest pose landmarks', () => {

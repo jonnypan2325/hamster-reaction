@@ -67,6 +67,8 @@ function debugBlendshapeScores(scores: Record<string, number>) {
     ),
     mouthSmileLeft: scores.mouthSmileLeft ?? 0,
     mouthSmileRight: scores.mouthSmileRight ?? 0,
+    mouthFrownLeft: scores.mouthFrownLeft ?? 0,
+    mouthFrownRight: scores.mouthFrownRight ?? 0,
     jawOpen: scores.jawOpen ?? 0,
   };
 }

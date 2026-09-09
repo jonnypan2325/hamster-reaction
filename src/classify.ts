@@ -13,8 +13,8 @@ export type DetectionInput = {
 export const THRESHOLDS = {
   glassesNearFace: 0.28, mouthNear: 0.14, elbowBendDegrees: 100, poseVisibility: 0.5,
   handsTogether: 0.12, thinkingNearMouth: 0.25, hugBelowFace: 0.2, yawDegrees: 18,
-  pitchDegrees: 15, mouthPucker: 0.25, browRaised: 0.70, jawOpen: 0.5,
-  teethSmile: 0.35, teethJawOpenMax: 0.35, mouthFrown: 0.25,
+  mouthPucker: 0.25, browRaised: 0.70, jawOpen: 0.5,
+  smile: 0.35, smileJawOpenMax: 0.35, mouthFrown: 0.15,
 } as const;
 
 const defaultCandidate: Candidate = { id: 'default', confidence: 0 };
@@ -36,8 +36,8 @@ export function classifyFace(blendshapes: Record<string, number>): Candidate | n
   const jawOpen = score(blendshapes, 'jawOpen');
   const smileLeft = score(blendshapes, 'mouthSmileLeft');
   const smileRight = score(blendshapes, 'mouthSmileRight');
-  if (smileLeft >= THRESHOLDS.teethSmile && smileRight >= THRESHOLDS.teethSmile && jawOpen < THRESHOLDS.teethJawOpenMax) {
-    return { id: 'teeth', confidence: average(smileLeft, smileRight) };
+  if (smileLeft >= THRESHOLDS.smile && smileRight >= THRESHOLDS.smile && jawOpen < THRESHOLDS.smileJawOpenMax) {
+    return { id: 'smile', confidence: average(smileLeft, smileRight) };
   }
   if (mouthPucker >= THRESHOLDS.mouthPucker && jawOpen >= THRESHOLDS.mouthPucker) return { id: 'silly', confidence: average(mouthPucker, jawOpen) };
   if (jawOpen >= THRESHOLDS.jawOpen) return { id: 'drooling', confidence: jawOpen };
