@@ -196,7 +196,7 @@ export default function App() {
   return (
     <main className="page-shell" id="top">
       <header className="masthead">
-        <a className="brand" href="#top" aria-label="HamsterReact home">HamsterReact</a>
+        <a className="brand" href="#top" aria-label="Hamster Reaction home">Hamster Reaction</a>
         <a className="portfolio-link" href="https://jonathanpan.me">Jonathan Pan ↗</a>
       </header>
 
