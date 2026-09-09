@@ -16,7 +16,7 @@ type DebugLandmarks = {
   pitchDegrees: number | null;
   inferenceRate: number;
   blendshapes: {
-    tongueOut: number;
+    mouthPucker: number;
     eyeWideLeft: number;
     eyeWideRight: number;
     browRaised: number;
@@ -213,13 +213,12 @@ export default function App() {
     <main className="page-shell" id="top">
       <header className="masthead">
         <a className="brand" href="#top" aria-label="Hamster Reaction home">Hamster Reaction</a>
-        <a className="portfolio-link" href="https://jonathanpan.me">Jonathan Pan ↗</a>
       </header>
 
       <section className="studio" aria-label="Hamster reaction studio">
         <article className="panel hamster-panel">
           <div className="panel-heading">
-            <p className="panel-kicker">Hamster response</p>
+            <p className="panel-kicker">The hamster is</p>
             <span className="gesture-pill">{camera.status === 'ready' ? activeGesture.label : gestureById.default.label}</span>
           </div>
           <div className="media-frame hamster-frame">
@@ -251,7 +250,7 @@ export default function App() {
             <p className="debug-readout">
               raw {gestureById[rawGestureId].label} · yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps
               <br />
-              tongue {debugMetrics.blendshapes.tongueOut.toFixed(2)} · eyes {debugMetrics.blendshapes.eyeWideLeft.toFixed(2)}/{debugMetrics.blendshapes.eyeWideRight.toFixed(2)} · brow {debugMetrics.blendshapes.browRaised.toFixed(2)} · smile {debugMetrics.blendshapes.mouthSmileLeft.toFixed(2)}/{debugMetrics.blendshapes.mouthSmileRight.toFixed(2)} · jaw {debugMetrics.blendshapes.jawOpen.toFixed(2)}
+              pucker {debugMetrics.blendshapes.mouthPucker.toFixed(2)} · eyes {debugMetrics.blendshapes.eyeWideLeft.toFixed(2)}/{debugMetrics.blendshapes.eyeWideRight.toFixed(2)} · brow {debugMetrics.blendshapes.browRaised.toFixed(2)} · smile {debugMetrics.blendshapes.mouthSmileLeft.toFixed(2)}/{debugMetrics.blendshapes.mouthSmileRight.toFixed(2)} · jaw {debugMetrics.blendshapes.jawOpen.toFixed(2)}
             </p>
           )}
         </article>
@@ -287,8 +286,7 @@ export default function App() {
       </section>
 
       <footer>
-        <p>Built for the browser. Recognition will run locally on your device.</p>
-        <a href="https://jonathanpan.me">More from Jonathan Pan ↗</a>
+        <a href="https://jonathanpan.me">Jonathan Pan</a>
       </footer>
     </main>
   );

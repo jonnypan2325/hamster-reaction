@@ -34,9 +34,9 @@ npm run preview     # serve dist/ locally
 | Teeth showing | Smile broadly and show your teeth |
 | Thumbs down | Point your thumb down |
 | Side eye | Turn your head to either side |
-| Startled | Open your eyes wide and raise your eyebrows |
+| Startled | Raise your eyebrows high. |
 | Drooling | Open your mouth wide |
-| Silly | Stick your tongue out |
+| Silly | Pucker your lips and open your mouth. |
 | Fist by head | Hold a curled fist beside your head |
 | Two hands | Show both hands to the camera |
 | Glasses | Make a pinch close to your face |

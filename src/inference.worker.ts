@@ -58,7 +58,7 @@ function blendshapeScores(categories: readonly { categoryName: string; score: nu
 
 function debugBlendshapeScores(scores: Record<string, number>) {
   return {
-    tongueOut: scores.tongueOut ?? 0,
+    mouthPucker: scores.mouthPucker ?? 0,
     eyeWideLeft: scores.eyeWideLeft ?? 0,
     eyeWideRight: scores.eyeWideRight ?? 0,
     browRaised: Math.max(
