@@ -55,8 +55,11 @@ button { border: 0; padding: .62rem .85rem; color: #fff; background: #0e6ba8; bo
 button:disabled { cursor: not-allowed; opacity: .42; }
 .secondary-button { color: #18191d; background: #ececec; }
 .debug-button { color: #0e6ba8; background: transparent; outline: 1px solid #0e6ba8; outline-offset: -1px; }
+.capture-button { color: #fff; background: #27714c; }
+.capture-button:hover { background: #1e5d3e; }
 .camera-note { min-height: 2.6em; margin: .7rem 0 0; color: #6b7280; font-size: .82rem; line-height: 1.45; }
 .recognition-note { min-height: 1.45em; margin: .25rem 0 0; color: #6b7280; font-size: .76rem; line-height: 1.45; }
+.capture-note { min-height: 1.45em; margin: .25rem 0 0; color: #27714c; font-size: .76rem; line-height: 1.45; }
 .debug-readout { margin: .25rem 0 0; color: #6b7280; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; }
 
 .guide-section { border-bottom: 1px solid #ececec; }
@@ -86,7 +89,8 @@ footer p { margin: 0; }
   .camera-actions { order: 3; flex-wrap: wrap; }
   .camera-note { order: 4; }
   .recognition-note { order: 5; }
-  .debug-readout { order: 6; }
+  .capture-note { order: 6; }
+  .debug-readout { order: 7; }
   .camera-state { font-size: .68rem; gap: .3rem; }
   .gesture-grid { grid-template-columns: 1fr; }
   .gesture-card { grid-template-columns: 5rem 1fr; min-height: 6.3rem; }

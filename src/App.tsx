@@ -3,6 +3,7 @@ import { CameraController, type CameraState, idleCameraState } from './cameraSes
 import { gestureById, gestures, type GestureId } from './gestures';
 import type { Point } from './classify';
 import { GestureStabilizer } from './gestureStabilizer';
+import { canShareReactionFile, createReactionCard, isShareCanceled } from './captureShare';
 
 function imageUrl(fileName: string): string {
   return new URL(`hamsters/${fileName}`, document.baseURI).toString();
@@ -62,6 +63,8 @@ export default function App() {
   const [recognitionStatus, setRecognitionStatus] = useState<'idle' | 'initializing' | 'ready' | 'error'>('idle');
   const [showDebug, setShowDebug] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<Pick<DebugLandmarks, 'yawDegrees' | 'pitchDegrees' | 'inferenceRate' | 'blendshapes'> | null>(null);
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const [captureMessage, setCaptureMessage] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cameraControllerRef = useRef<CameraController | null>(null);
@@ -79,6 +82,8 @@ export default function App() {
         setCamera(nextCamera);
         setRecognitionStatus(nextCamera.status === 'ready' ? 'initializing' : 'idle');
         if (nextCamera.status !== 'ready') {
+          setCaptureBusy(false);
+          setCaptureMessage('');
           setRawGestureId('default');
           setStableGestureId(gestureStabilizer.reset());
           setDebugMetrics(null);
@@ -119,6 +124,50 @@ export default function App() {
   function stopCamera() {
     setRecognitionMessage('');
     cameraControllerRef.current?.stop();
+  }
+
+  async function makeReactionCard() {
+    const video = videoRef.current;
+    if (!previewVisible || !video) throw new Error('The camera frame is not ready yet.');
+
+    const filename = `hamster-reaction-${stableGestureId}.png`;
+    const blob = await createReactionCard({
+      hamsterImageSrc: imageUrl(activeGesture.image),
+      hamsterLabel: activeGesture.label,
+      video,
+    });
+    return { blob, filename };
+  }
+
+  async function captureAndShare() {
+    if (!previewVisible || !videoRef.current) return;
+
+    setCaptureBusy(true);
+    setCaptureMessage('Making your card locally…');
+    try {
+      const { blob, filename } = await makeReactionCard();
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (canShareReactionFile(file)) {
+        try {
+          await navigator.share({
+            files: [file],
+          });
+          setCaptureMessage('Reaction card shared.');
+        } catch (error) {
+          if (isShareCanceled(error)) {
+            setCaptureMessage('Sharing canceled. Your card stayed on this device.');
+          } else {
+            setCaptureMessage('Sharing is unavailable in this browser. Your card was created locally.');
+          }
+        }
+      } else {
+        setCaptureMessage('Sharing is unavailable in this browser. Your card was created locally.');
+      }
+    } catch {
+      setCaptureMessage('Could not capture the reaction. Try again when the preview is ready.');
+    } finally {
+      setCaptureBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -177,6 +226,8 @@ export default function App() {
       setRawGestureId('default');
       setStableGestureId(gestureStabilizer.reset());
       setDebugMetrics(null);
+      setCaptureBusy(false);
+      setCaptureMessage('');
       const overlay = overlayRef.current;
       const context = overlay?.getContext('2d');
       if (overlay && context) context.clearRect(0, 0, overlay.width, overlay.height);
@@ -246,6 +297,9 @@ export default function App() {
             <button type="button" onClick={startCamera} disabled={camera.status === 'starting' || camera.status === 'ready'}>Start camera</button>
             <button type="button" className="secondary-button" onClick={stopCamera} disabled={camera.status !== 'starting' && camera.status !== 'ready'}>Stop</button>
             <button type="button" className="debug-button" onClick={() => setShowDebug((visible) => !visible)} aria-pressed={showDebug}>Landmarks</button>
+            {previewVisible && (
+              <button type="button" className="capture-button" onClick={() => void captureAndShare()} disabled={captureBusy}>{captureBusy ? 'Making card…' : 'Capture & share'}</button>
+            )}
           </div>
           <div className="media-frame camera-frame">
             <video className="camera-preview" ref={videoRef} autoPlay muted playsInline hidden={!previewVisible} aria-label="Camera preview" />
@@ -257,6 +311,7 @@ export default function App() {
           </div>
           <p className="camera-note" aria-live="polite">{camera.message}</p>
           {recognitionMessage && <p className="recognition-note" aria-live="polite">{recognitionMessage}</p>}
+          {previewVisible && captureMessage && <p className="capture-note" aria-live="polite">{captureMessage}</p>}
           {showDebug && debugMetrics && (
             <p className="debug-readout">
               raw {gestureById[rawGestureId].label} · yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps
