@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "prepare:mediapipe-assets": "node scripts/prepare-mediapipe-assets.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "check": "npm run typecheck && npm run lint && npm test"
