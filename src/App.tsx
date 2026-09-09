@@ -1,43 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
 import { CameraController, type CameraState, idleCameraState } from './cameraSession';
-
-type Gesture = {
-  id: string;
-  label: string;
-  prompt: string;
-  image: string;
-};
-
-const gestures: readonly Gesture[] = [
-  { id: 'default', label: 'Neutral', prompt: 'Relax and return to the default hamster.', image: 'default.jpg' },
-  { id: 'thumbs-up', label: 'Thumbs up', prompt: 'Hold a thumbs-up away from your face.', image: 'thumbs-up.jpg' },
-  { id: 'thumbs-down', label: 'Thumbs down', prompt: 'Point your thumb down.', image: 'thumbs-down.jpg' },
-  { id: 'side-eye', label: 'Side eye', prompt: 'Turn your head to either side.', image: 'side-eye.jpg' },
-  { id: 'startled', label: 'Startled', prompt: 'Open your eyes wide and raise your eyebrows.', image: 'startled.jpg' },
-  { id: 'drooling', label: 'Drooling', prompt: 'Open your mouth wide.', image: 'drooling.jpg' },
-  { id: 'silly', label: 'Silly', prompt: 'Stick your tongue out.', image: 'silly.jpg' },
-  { id: 'fist-by-head', label: 'Fist by head', prompt: 'Hold a curled fist beside your head.', image: 'fist-by-head.webp' },
-  { id: 'two-hands', label: 'Two hands', prompt: 'Show both hands to the camera.', image: 'two-hands.jpg' },
-  { id: 'glasses', label: 'Glasses', prompt: 'Make a pinch close to your face.', image: 'glasses.jpg' },
-  { id: 'bicep', label: 'Bicep', prompt: 'Flex with your wrist above your shoulder.', image: 'bicep.jpg' },
-  { id: 'cross-arms', label: 'Cross arms', prompt: 'Cross your arms at chest height.', image: 'cross-arms.jpg' },
-  { id: 'finger-mouth', label: 'Finger at mouth', prompt: 'Place one pointing finger near your mouth.', image: 'finger-mouth.jpg' },
-  { id: 'nerd', label: 'One finger', prompt: 'Raise one pointing finger.', image: 'nerd.jpg' },
-  { id: 'thinking', label: 'Thinking', prompt: 'Clasp your hands close to your mouth.', image: 'thinking.jpg' },
-  { id: 'hug', label: 'Hug', prompt: 'Clasp your hands at chest height.', image: 'hug.jpg' },
-  { id: 'sad', label: 'Sad', prompt: 'Tilt your head down.', image: 'sad.jpg' },
-];
+import { gestureById, gestures, type GestureId } from './gestures';
+import type { Point } from './classify';
 
 function imageUrl(fileName: string): string {
   return new URL(`hamsters/${fileName}`, document.baseURI).toString();
 }
 
+type DebugLandmarks = { face: Point[]; hands: Point[][]; pose: Point[]; yawDegrees: number | null; pitchDegrees: number | null; inferenceRate: number };
+
+function drawDebugOverlay(canvas: HTMLCanvasElement, debug: DebugLandmarks, sourceWidth: number, sourceHeight: number) {
+  const width = canvas.width;
+  const height = canvas.height;
+  const context = canvas.getContext('2d');
+  if (!context || !width || !height || !sourceWidth || !sourceHeight) return;
+  context.clearRect(0, 0, width, height);
+  const scale = Math.max(width / sourceWidth, height / sourceHeight);
+  const renderedWidth = sourceWidth * scale;
+  const renderedHeight = sourceHeight * scale;
+  const offsetX = (width - renderedWidth) / 2;
+  const offsetY = (height - renderedHeight) / 2;
+  const drawPoints = (points: Point[], color: string, radius: number) => {
+    context.fillStyle = color;
+    for (const point of points) {
+      context.beginPath();
+      context.arc(offsetX + point.x * renderedWidth, offsetY + point.y * renderedHeight, radius, 0, Math.PI * 2);
+      context.fill();
+    }
+  };
+  drawPoints(debug.face, '#0e6ba8', 1.5);
+  debug.hands.forEach((hand) => drawPoints(hand, '#c75a41', 2));
+  drawPoints(debug.pose, '#2f9c65', 2);
+}
+
 export default function App() {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [camera, setCamera] = useState<CameraState>(idleCameraState);
+  const [gestureId, setGestureId] = useState<GestureId>('default');
+  const [recognitionMessage, setRecognitionMessage] = useState('Recognition starts when the camera is connected.');
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugMetrics, setDebugMetrics] = useState<Pick<DebugLandmarks, 'yawDegrees' | 'pitchDegrees' | 'inferenceRate'> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const overlayRef = useRef<HTMLCanvasElement>(null);
   const cameraControllerRef = useRef<CameraController | null>(null);
-  const neutral = gestures[0];
+  const inferenceGenerationRef = useRef(0);
+  const activeGesture = gestureById[gestureId];
 
   useEffect(() => {
     const cameraController = new CameraController({
@@ -45,7 +52,15 @@ export default function App() {
         audio: false,
         video: { facingMode: { ideal: 'user' } },
       }),
-      onState: setCamera,
+      onState: (nextCamera) => {
+        setCamera(nextCamera);
+        if (nextCamera.status !== 'ready') {
+          setGestureId('default');
+          setDebugMetrics(null);
+          const context = overlayRef.current?.getContext('2d');
+          if (context && overlayRef.current) context.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
+        }
+      },
       onStream: (stream) => {
         const video = videoRef.current;
         if (!video) return;
@@ -72,12 +87,100 @@ export default function App() {
       setCamera({ status: 'unavailable', message: 'Camera access is unavailable in this browser.' });
       return;
     }
+    setRecognitionMessage('Recognition is initializing locally…');
     void cameraControllerRef.current?.start();
   }
 
   function stopCamera() {
+    setRecognitionMessage('Recognition is stopped. No frames are being analyzed.');
     cameraControllerRef.current?.stop();
   }
+
+  useEffect(() => {
+    if (camera.status !== 'ready') return;
+
+    const generation = ++inferenceGenerationRef.current;
+    const worker = new Worker(new URL('./inference.worker.ts', import.meta.url), { type: 'module' });
+    let isAlive = true;
+    let isReady = false;
+    let isInFlight = false;
+    let hasFailed = false;
+    let lastFrameAt = 0;
+    let frameHandle = 0;
+
+    worker.onmessage = (event: MessageEvent<{ type: string; generation: number; candidate?: { id: GestureId }; debug?: DebugLandmarks; message?: string }>) => {
+      const message = event.data;
+      if (!isAlive || message.generation !== generation) return;
+      if (message.type === 'ready') {
+        isReady = true;
+        setRecognitionMessage('Recognition is running locally.');
+        return;
+      }
+      if (message.type === 'result') {
+        isInFlight = false;
+        if (message.candidate) setGestureId(message.candidate.id);
+        if (message.debug) setDebugMetrics(message.debug);
+        const video = videoRef.current;
+        const overlay = overlayRef.current;
+        if (video && overlay && message.debug) {
+          if (overlay.width !== video.clientWidth || overlay.height !== video.clientHeight) {
+            overlay.width = video.clientWidth;
+            overlay.height = video.clientHeight;
+          }
+          drawDebugOverlay(overlay, message.debug, video.videoWidth, video.videoHeight);
+        }
+        return;
+      }
+      if (message.type === 'error') {
+        fail(message.message ?? 'Recognition is unavailable.');
+      }
+    };
+
+    const fail = (message: string) => {
+      if (hasFailed || !isAlive) return;
+      hasFailed = true;
+      isReady = false;
+      isInFlight = false;
+      cancelAnimationFrame(frameHandle);
+      worker.terminate();
+      setGestureId('default');
+      setDebugMetrics(null);
+      const overlay = overlayRef.current;
+      const context = overlay?.getContext('2d');
+      if (overlay && context) context.clearRect(0, 0, overlay.width, overlay.height);
+      setRecognitionMessage(message);
+    };
+    worker.onerror = () => fail('Recognition is unavailable in this browser.');
+    worker.onmessageerror = () => fail('Recognition could not read a camera frame.');
+
+    worker.postMessage({ type: 'init', generation, assetBaseUrl: document.baseURI });
+    const requestFrame = (now: number) => {
+      const video = videoRef.current;
+      if (isAlive && !hasFailed && isReady && !isInFlight && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && now - lastFrameAt >= 50) {
+        isInFlight = true;
+        lastFrameAt = now;
+        void createImageBitmap(video).then((bitmap) => {
+          if (!isAlive) {
+            bitmap.close();
+            return;
+          }
+          try {
+            worker.postMessage({ type: 'frame', generation, timestamp: performance.now(), bitmap }, [bitmap]);
+          } catch {
+            bitmap.close();
+            fail('Recognition could not send a camera frame.');
+          }
+        }).catch(() => { isInFlight = false; });
+      }
+      if (isAlive && !hasFailed) frameHandle = requestAnimationFrame(requestFrame);
+    };
+    frameHandle = requestAnimationFrame(requestFrame);
+    return () => {
+      isAlive = false;
+      cancelAnimationFrame(frameHandle);
+      worker.terminate();
+    };
+  }, [camera.status]);
 
   return (
     <main className="page-shell" id="top">
@@ -90,10 +193,10 @@ export default function App() {
         <article className="panel hamster-panel">
           <div className="panel-heading">
             <p className="panel-kicker">Hamster response</p>
-            <span className="gesture-pill">{neutral.label}</span>
+            <span className="gesture-pill">{camera.status === 'ready' ? activeGesture.label : gestureById.default.label}</span>
           </div>
           <div className="media-frame hamster-frame">
-            <img src={imageUrl(neutral.image)} alt="The neutral hamster response" />
+            <img src={imageUrl(camera.status === 'ready' ? activeGesture.image : gestureById.default.image)} alt={`The ${(camera.status === 'ready' ? activeGesture : gestureById.default).label.toLowerCase()} hamster response`} />
           </div>
         </article>
 
@@ -105,15 +208,21 @@ export default function App() {
           <div className="camera-actions">
             <button type="button" onClick={startCamera} disabled={camera.status === 'starting' || camera.status === 'ready'}>Start camera</button>
             <button type="button" className="secondary-button" onClick={stopCamera} disabled={camera.status !== 'starting' && camera.status !== 'ready'}>Stop</button>
+            <button type="button" className="debug-button" onClick={() => setShowDebug((visible) => !visible)} aria-pressed={showDebug}>Landmarks</button>
           </div>
           <div className="media-frame camera-frame">
             <video className="camera-preview" ref={videoRef} autoPlay muted playsInline hidden={camera.status !== 'ready'} aria-label="Camera preview" />
+            <canvas className="landmark-overlay" ref={overlayRef} hidden={!showDebug || camera.status !== 'ready'} aria-hidden="true" />
             <div className="camera-placeholder" hidden={camera.status === 'ready'}>
               <span className="camera-glyph" aria-hidden="true">⌁</span>
               <p>Camera preview</p>
             </div>
           </div>
           <p className="camera-note" aria-live="polite">{camera.message}</p>
+          <p className="recognition-note" aria-live="polite">{camera.status === 'ready' ? recognitionMessage : 'Recognition is stopped. No frames are being analyzed.'}</p>
+          {showDebug && debugMetrics && (
+            <p className="debug-readout">yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps</p>
+          )}
         </article>
       </section>
 

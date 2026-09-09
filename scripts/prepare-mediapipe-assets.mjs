@@ -62,7 +62,16 @@ async function copyWasmFiles() {
   await mkdir(wasmDestination, { recursive: true });
   const files = (await readdir(wasmSource)).filter((file) => file.endsWith('.js') || file.endsWith('.wasm'));
 
-  await Promise.all(files.map((file) => copyFile(path.join(wasmSource, file), path.join(wasmDestination, file))));
+  await Promise.all(files.map(async (file) => {
+    const source = path.join(wasmSource, file);
+    const destination = path.join(wasmDestination, file);
+    if (file.endsWith('.js')) {
+      const loader = await readFile(source, 'utf8');
+      await writeFile(destination, `${loader}\nself.ModuleFactory = ModuleFactory;\nself.custom_dbg ??= console.warn.bind(console);\n`);
+      return;
+    }
+    await copyFile(source, destination);
+  }));
   console.log(`Copied ${files.length} MediaPipe WASM runtime files to public/wasm.`);
 }
 
