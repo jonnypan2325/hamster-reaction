@@ -8,7 +8,23 @@ function imageUrl(fileName: string): string {
   return new URL(`hamsters/${fileName}`, document.baseURI).toString();
 }
 
-type DebugLandmarks = { face: Point[]; hands: Point[][]; pose: Point[]; yawDegrees: number | null; pitchDegrees: number | null; inferenceRate: number };
+type DebugLandmarks = {
+  face: Point[];
+  hands: Point[][];
+  pose: Point[];
+  yawDegrees: number | null;
+  pitchDegrees: number | null;
+  inferenceRate: number;
+  blendshapes: {
+    tongueOut: number;
+    eyeWideLeft: number;
+    eyeWideRight: number;
+    browRaised: number;
+    mouthSmileLeft: number;
+    mouthSmileRight: number;
+    jawOpen: number;
+  };
+};
 
 function drawDebugOverlay(canvas: HTMLCanvasElement, debug: DebugLandmarks, sourceWidth: number, sourceHeight: number) {
   const width = canvas.width;
@@ -42,7 +58,7 @@ export default function App() {
   const [gestureStabilizer] = useState(() => new GestureStabilizer());
   const [recognitionMessage, setRecognitionMessage] = useState('Recognition starts when the camera is connected.');
   const [showDebug, setShowDebug] = useState(false);
-  const [debugMetrics, setDebugMetrics] = useState<Pick<DebugLandmarks, 'yawDegrees' | 'pitchDegrees' | 'inferenceRate'> | null>(null);
+  const [debugMetrics, setDebugMetrics] = useState<Pick<DebugLandmarks, 'yawDegrees' | 'pitchDegrees' | 'inferenceRate' | 'blendshapes'> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const cameraControllerRef = useRef<CameraController | null>(null);
@@ -232,7 +248,11 @@ export default function App() {
           <p className="camera-note" aria-live="polite">{camera.message}</p>
           <p className="recognition-note" aria-live="polite">{camera.status === 'ready' ? recognitionMessage : 'Recognition is stopped. No frames are being analyzed.'}</p>
           {showDebug && debugMetrics && (
-            <p className="debug-readout">raw {gestureById[rawGestureId].label} · yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps</p>
+            <p className="debug-readout">
+              raw {gestureById[rawGestureId].label} · yaw {debugMetrics.yawDegrees?.toFixed(1) ?? 'n/a'}° · pitch {debugMetrics.pitchDegrees?.toFixed(1) ?? 'n/a'}° · {debugMetrics.inferenceRate.toFixed(1)} fps
+              <br />
+              tongue {debugMetrics.blendshapes.tongueOut.toFixed(2)} · eyes {debugMetrics.blendshapes.eyeWideLeft.toFixed(2)}/{debugMetrics.blendshapes.eyeWideRight.toFixed(2)} · brow {debugMetrics.blendshapes.browRaised.toFixed(2)} · smile {debugMetrics.blendshapes.mouthSmileLeft.toFixed(2)}/{debugMetrics.blendshapes.mouthSmileRight.toFixed(2)} · jaw {debugMetrics.blendshapes.jawOpen.toFixed(2)}
+            </p>
           )}
         </article>
       </section>
@@ -247,7 +267,7 @@ export default function App() {
         >
           <span>
             <span className="eyebrow">Gesture guide</span>
-            <strong id="guide-title">Seventeen ways to meet the hamster</strong>
+            <strong id="guide-title">Eighteen ways to meet the hamster</strong>
           </span>
           <span className="toggle-mark" aria-hidden="true">{isGuideOpen ? '−' : '+'}</span>
         </button>

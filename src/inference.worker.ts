@@ -56,6 +56,21 @@ function blendshapeScores(categories: readonly { categoryName: string; score: nu
   return Object.fromEntries(categories.map((category) => [category.categoryName, category.score]));
 }
 
+function debugBlendshapeScores(scores: Record<string, number>) {
+  return {
+    tongueOut: scores.tongueOut ?? 0,
+    eyeWideLeft: scores.eyeWideLeft ?? 0,
+    eyeWideRight: scores.eyeWideRight ?? 0,
+    browRaised: Math.max(
+      scores.browInnerUp ?? 0,
+      ((scores.browOuterUpLeft ?? 0) + (scores.browOuterUpRight ?? 0)) / 2,
+    ),
+    mouthSmileLeft: scores.mouthSmileLeft ?? 0,
+    mouthSmileRight: scores.mouthSmileRight ?? 0,
+    jawOpen: scores.jawOpen ?? 0,
+  };
+}
+
 async function infer(message: FrameMessage) {
   try {
     if (message.generation !== readyGeneration || !faceLandmarker || !handLandmarker || !poseLandmarker) return;
@@ -82,7 +97,15 @@ async function infer(message: FrameMessage) {
       generation: message.generation,
       timestamp: message.timestamp,
       candidate,
-      debug: { face, hands, pose, yawDegrees: headYawDegrees(facialTransformationMatrix), pitchDegrees: headPitchDegrees(facialTransformationMatrix), inferenceRate },
+      debug: {
+        face,
+        hands,
+        pose,
+        yawDegrees: headYawDegrees(facialTransformationMatrix),
+        pitchDegrees: headPitchDegrees(facialTransformationMatrix),
+        inferenceRate,
+        blendshapes: debugBlendshapeScores(blendshapes),
+      },
     });
   } catch (error) {
     worker.postMessage({ type: 'error', generation: message.generation, message: error instanceof Error ? error.message : 'Recognition failed.' });

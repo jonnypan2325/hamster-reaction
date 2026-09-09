@@ -41,10 +41,18 @@ function bicepPose() {
 }
 
 describe('gesture classifier', () => {
-  it('uses the requested expression precedence and both wide eyes', () => {
+  it('uses expression thresholds and precedence', () => {
     expect(classifyFace({ tongueOut: 0.7, jawOpen: 0.9, eyeWideLeft: 0.8, eyeWideRight: 0.8, browInnerUp: 0.8 })?.id).toBe('silly');
-    expect(classifyFace({ eyeWideLeft: 0.3, eyeWideRight: 0.3, browInnerUp: 0.2 })?.id).toBe('startled');
-    expect(classifyFace({ eyeWideLeft: 0.8, eyeWideRight: 0.29, browInnerUp: 0.8 })).toBeNull();
+    expect(classifyFace({ tongueOut: 0.08 })?.id).toBe('silly');
+    expect(classifyFace({ tongueOut: 0.079, mouthSmileLeft: 0.9, mouthSmileRight: 0.9 })?.id).toBe('teeth');
+    expect(classifyFace({ eyeWideLeft: 0.12, eyeWideRight: 0.12, browInnerUp: 0.08 })?.id).toBe('startled');
+    expect(classifyFace({ eyeWideLeft: 0.12, eyeWideRight: 0.12, browInnerUp: 0.08, mouthSmileLeft: 0.9, mouthSmileRight: 0.9 })?.id).toBe('startled');
+    expect(classifyFace({ eyeWideLeft: 0.119, eyeWideRight: 0.12, browInnerUp: 0.08 })).toBeNull();
+    expect(classifyFace({ eyeWideLeft: 0.12, eyeWideRight: 0.12, browInnerUp: 0.079 })).toBeNull();
+    expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, jawOpen: 0.349, tongueOut: 0.079 })?.id).toBe('teeth');
+    expect(classifyFace({ mouthSmileLeft: 0.349, mouthSmileRight: 0.35, jawOpen: 0.349 })).toBeNull();
+    expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, jawOpen: 0.35 })).toBeNull();
+    expect(classifyFace({ mouthSmileLeft: 0.35, mouthSmileRight: 0.35, tongueOut: 0.08 })?.id).toBe('silly');
     expect(classifyFace({ jawOpen: 0.5 })?.id).toBe('drooling');
   });
 

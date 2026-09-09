@@ -1,7 +1,7 @@
 export type GestureId =
   | 'default' | 'thumbs-up' | 'thumbs-down' | 'side-eye' | 'startled' | 'drooling' | 'silly'
   | 'fist-by-head' | 'two-hands' | 'glasses' | 'bicep' | 'cross-arms' | 'finger-mouth'
-  | 'nerd' | 'thinking' | 'hug' | 'sad';
+  | 'nerd' | 'thinking' | 'hug' | 'sad' | 'teeth';
 
 export type Gesture = { id: GestureId; label: string; prompt: string; image: string };
 
@@ -23,6 +23,7 @@ export const gestures: readonly Gesture[] = [
   { id: 'thinking', label: 'Thinking', prompt: 'Clasp your hands close to your mouth.', image: 'thinking.jpg' },
   { id: 'hug', label: 'Hug', prompt: 'Clasp your hands at chest height.', image: 'hug.jpg' },
   { id: 'sad', label: 'Sad', prompt: 'Tilt your head down.', image: 'sad.jpg' },
+  { id: 'teeth', label: 'Teeth showing', prompt: 'Smile broadly and show your teeth.', image: 'teeth.jpg' },
 ];
 
 export const gestureById = Object.fromEntries(gestures.map((gesture) => [gesture.id, gesture])) as Record<GestureId, Gesture>;

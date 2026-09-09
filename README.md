@@ -31,6 +31,7 @@ npm run preview     # serve dist/ locally
 | --- | --- |
 | Neutral | Relax and return to the default hamster |
 | Thumbs up | Hold a thumbs-up away from your face |
+| Teeth showing | Smile broadly and show your teeth |
 | Thumbs down | Point your thumb down |
 | Side eye | Turn your head to either side |
 | Startled | Open your eyes wide and raise your eyebrows |
