@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyDetection, classifyFace, fingersUp, headPitchDegrees, headYawDegrees, isPinch } from './classify';
+import { classifyDetection, classifyFace, displayedFaceYawDegrees, fingersUp, headPitchDegrees, headYawDegrees, isPinch } from './classify';
 
 type Point = { x: number; y: number; visibility?: number };
 const point = (x = 0.5, y = 0.5, visibility = 1): Point => ({ x, y, visibility });
@@ -101,6 +101,19 @@ describe('gesture classifier', () => {
     expect(classifyDetection(input({ facialTransformationMatrix: both })).id).toBe('side-eye-right');
     expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.15 }, facialTransformationMatrix: both })).id).toBe('sad');
     expect(classifyDetection(input({ blendshapes: { mouthFrownLeft: 0.15, mouthFrownRight: 0.149 }, facialTransformationMatrix: matrix(9, -20) })).id).toBe('default');
+  });
+
+  it('maps landmark yaw according to the mirrored preview', () => {
+    const turned = face();
+    turned[1] = point(0.38, 0.3);
+    turned[33] = point(0.35, 0.3);
+    turned[263] = point(0.65, 0.3);
+    expect(displayedFaceYawDegrees(turned)).toBeGreaterThan(0);
+    expect(classifyDetection(input({ face: turned, facialTransformationMatrix: matrix(8, -30) })).id).toBe('side-eye-right');
+
+    turned[1] = point(0.62, 0.3);
+    expect(displayedFaceYawDegrees(turned)).toBeLessThan(0);
+    expect(classifyDetection(input({ face: turned, facialTransformationMatrix: matrix(8, 30) })).id).toBe('side-eye-left');
   });
 
   it('does not use invisible or non-chest pose landmarks', () => {

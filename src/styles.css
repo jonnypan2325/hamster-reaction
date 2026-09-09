@@ -76,9 +76,18 @@ footer p { margin: 0; }
 @media (max-width: 767px) {
   .page-shell { width: min(100% - 3rem, 64rem); }
   .masthead { padding: 1.1rem 0; }
-  .studio { grid-template-columns: 1fr; }
-  .hamster-panel { padding-right: 0; border-right: 0; border-bottom: 1px solid #ececec; }
-  .camera-panel { padding-left: 0; }
+  .studio { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hamster-panel { display: flex; flex-direction: column; padding-right: .75rem; border-right: 1px solid #ececec; }
+  .hamster-frame { order: 1; }
+  .hamster-panel .panel-heading { order: 2; }
+  .camera-panel { display: flex; flex-direction: column; padding-left: .75rem; }
+  .camera-frame { order: 1; }
+  .camera-panel .panel-heading { order: 2; }
+  .camera-actions { order: 3; flex-wrap: wrap; }
+  .camera-note { order: 4; }
+  .recognition-note { order: 5; }
+  .debug-readout { order: 6; }
+  .camera-state { font-size: .68rem; gap: .3rem; }
   .gesture-grid { grid-template-columns: 1fr; }
   .gesture-card { grid-template-columns: 5rem 1fr; min-height: 6.3rem; }
   .gesture-card img { width: 5rem; height: 5rem; }

@@ -142,6 +142,23 @@ function detectBicep(pose: Point[]) {
 export function headYawDegrees(matrix?: readonly number[]) { return matrix && matrix.length >= 10 ? Math.asin(clamp(matrix[8])) * 180 / Math.PI : null; }
 export function headPitchDegrees(matrix?: readonly number[]) { return matrix && matrix.length >= 10 ? Math.asin(clamp(-matrix[9])) * 180 / Math.PI : null; }
 
+/**
+ * Estimate yaw from landmarks in the coordinate system users see. Camera
+ * frames are mirrored by the preview, so negate the image-space nose offset.
+ * This avoids relying on platform-specific transformation-matrix handedness.
+ */
+export function displayedFaceYawDegrees(face: Point[]) {
+  const nose = face[1];
+  const leftEye = face[33];
+  const rightEye = face[263];
+  if (!nose || !leftEye || !rightEye) return null;
+  const eyeDistance = Math.hypot(leftEye.x - rightEye.x, leftEye.y - rightEye.y);
+  if (eyeDistance < 1e-6) return null;
+  const eyeMidpoint = { x: average(leftEye.x, rightEye.x), y: average(leftEye.y, rightEye.y) };
+  const imageOffset = (nose.x - eyeMidpoint.x) / eyeDistance;
+  return Math.atan(-imageOffset) * 180 / Math.PI;
+}
+
 export function classifyDetection(input: DetectionInput): Candidate {
   const faceExpression = classifyFace(input.blendshapes);
   if (faceExpression) return faceExpression;
@@ -154,7 +171,7 @@ export function classifyDetection(input: DetectionInput): Candidate {
   if (detectCrossArms(input.pose)) return { id: 'cross-arms', confidence: 0.7 };
   if (detectBicep(input.pose)) return { id: 'bicep', confidence: 0.6 };
   if (input.hands.length === 2) return { id: 'two-hands', confidence: 0.5 };
-  const yaw = headYawDegrees(input.facialTransformationMatrix);
+  const yaw = displayedFaceYawDegrees(input.face) ?? headYawDegrees(input.facialTransformationMatrix);
   if (yaw !== null && yaw > THRESHOLDS.yawDegrees) return { id: 'side-eye-right' as GestureId, confidence: yaw / 90 };
   if (yaw !== null && yaw < -THRESHOLDS.yawDegrees) return { id: 'side-eye-left' as GestureId, confidence: -yaw / 90 };
   return defaultCandidate;

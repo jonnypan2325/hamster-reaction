@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import { FaceLandmarker, FilesetResolver, HandLandmarker, PoseLandmarker } from '@mediapipe/tasks-vision';
-import { classifyDetection, headPitchDegrees, headYawDegrees, type Point } from './classify';
+import { classifyDetection, displayedFaceYawDegrees, headPitchDegrees, headYawDegrees, type Point } from './classify';
 
 type InitMessage = { type: 'init'; generation: number; assetBaseUrl: string };
 type FrameMessage = { type: 'frame'; generation: number; timestamp: number; bitmap: ImageBitmap };
@@ -103,7 +103,7 @@ async function infer(message: FrameMessage) {
         face,
         hands,
         pose,
-        yawDegrees: headYawDegrees(facialTransformationMatrix),
+        yawDegrees: displayedFaceYawDegrees(face) ?? headYawDegrees(facialTransformationMatrix),
         pitchDegrees: headPitchDegrees(facialTransformationMatrix),
         inferenceRate,
         blendshapes: debugBlendshapeScores(blendshapes),
